@@ -7,7 +7,7 @@ This is an AVR based mini word clock featuring:
 The unit is composed of two stacked PCB and one 8x8 dot-matrix display module.
 
 
-The Hardware folder is composed of Autodesk Eagle CAD files (schematics and PCB) and of Bill Of Material.
+The Hardware folder is composed of Autodesk Eagle CAD files (schematics and PCB) and of Bill Of Materials.
 
 The Software folder is composed of Atmel Studio 7.0 project files, including libraries and hex file.
 
