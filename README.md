@@ -13,3 +13,4 @@ The Software folder is composed of Atmel Studio 7.0 project files, including lib
 
 
 The I2C-master-lib is from user g4lvanix on Github ([github.com/g4lvanix/I2C-master-lib](http://github.com/g4lvanix/I2C-master-lib)). However, he does not include any licence in his repository therefore all rights for this library belongs to him.
+All other libraries included are under the licence descibed in the LICENCE.md file.
