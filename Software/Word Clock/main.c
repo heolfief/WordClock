@@ -45,7 +45,7 @@
 #include <avr/sleep.h>
 #include <util/delay.h>
 
-#include "lib/rtcDS3231/rtcDS3231.h"
+#include "lib/rtcDS3231/rtcDS3231.h"	// include library for the DS3231 RTC
 
 void minutes_to_matrix(uint8_t now_minutes, uint8_t *line_data);
 void hours_to_matrix(uint8_t now_hours, uint8_t *line_data);
