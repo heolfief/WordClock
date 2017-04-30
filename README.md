@@ -1,4 +1,4 @@
-#8x8 Dot Matrix Word Clock
+# 8x8 Dot Matrix Word Clock
 This is an AVR based mini word clock featuring:
 * Real Time Clock (DS3231)
 * LiPo battery with integrated USB charging circuit
