@@ -137,23 +137,23 @@ void rtc_get_date(uint16_t *year, uint8_t *month, uint8_t *date)
 	uint8_t tempmonth = 0, tempyear = 0;
 	
 	i2c_start((RTC_ADDR<<1) | I2C_WRITE); 		// Start I2C at RTC adress, write mode
-	i2c_write(0x04);							// Point to register adress 0x04
-	i2c_stop();									// End I2C communication
+	i2c_write(0x04);				// Point to register adress 0x04
+	i2c_stop();					// End I2C communication
 	
 	i2c_start((RTC_ADDR<<1) | I2C_READ); 		// Start I2C at RTC adress, read mode
 	
-	*date = bcdtodec(i2c_read_ack());			// Read date from register
-	tempmonth = i2c_read_ack();					// Read month from register
+	*date = bcdtodec(i2c_read_ack());		// Read date from register
+	tempmonth = i2c_read_ack();			// Read month from register
 	tempyear = bcdtodec(i2c_read_nack());		// Read year from register
 	
-	i2c_stop();									// End I2C communication
+	i2c_stop();					// End I2C communication
 	
 	*month = bcdtodec(tempmonth & 0x1F);		// Format month
 
-	if(tempmonth & 0x80)						// If year is 20xx
-		*year = tempyear + 2000;				// Add 2000 to year
-	else 										// If year is 19xx
-		*year = tempyear + 1900;				// Add 1900 to year
+	if(tempmonth & 0x80)				// If year is 20xx
+		*year = tempyear + 2000;		// Add 2000 to year
+	else 						// If year is 19xx
+		*year = tempyear + 1900;		// Add 1900 to year
 }
 
 uint8_t rtc_get_day()
@@ -161,12 +161,12 @@ uint8_t rtc_get_day()
 	uint8_t day;
 	
 	i2c_start((RTC_ADDR<<1) | I2C_WRITE); 		// Start I2C at RTC adress, write mode
-	i2c_write(0x03);							// Point to register adress 0x03
-	i2c_stop();									// End I2C communication
+	i2c_write(0x03);				// Point to register adress 0x03
+	i2c_stop();					// End I2C communication
 	
 	i2c_start((RTC_ADDR<<1) | I2C_READ); 		// Start I2C at RTC adress, read mode
 	day = bcdtodec(i2c_read_nack() & 0x07);		// Read day from register
-	i2c_stop();									// End I2C communication
+	i2c_stop();					// End I2C communication
 	
 	return day;
 }
