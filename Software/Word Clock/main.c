@@ -69,7 +69,7 @@ int main()
 	
 	PORTD |= (1<<PD2);							// Give power to RTC
 	//rtc_set_time_12h(10,0,0,1);				// Set time to 10:00:00 PM, do it once to set RTC, then comment tis line and reflash
-	// code to MCU (to prevent RTC from initiating to 10:00:00 PM each time on MCU reset)
+												// code to MCU (to prevent RTC from initiating to 10:00:00 PM each time on MCU reset)
 	PORTD &= ~(1<<PD2);							// Cut power to RTC	
 	
 	while (1)
