@@ -51,10 +51,15 @@
 // Functions definitions
 void minutes_to_matrix(uint8_t now_minutes, uint8_t *line_data);
 void hours_to_matrix(uint8_t now_hours, uint8_t *line_data);
-void display(uint8_t *line_data);
+void display(uint8_t *line_data, uint16_t number_of_loops);
 void sleep();
 void io_setup();
 void check_battery(uint8_t *lowbat, uint8_t *critbat);
+
+// Global variables
+uint8_t setmode=0;								// ...
+uint8_t time_counter=0;							// ...
+uint8_t bt_flag=0;								// ...To be used by the ISR
 
 // Main program
 int main()
@@ -66,12 +71,7 @@ int main()
 	PORTD |= (1<<PD2);							// Give power to RTC
 	i2c_init();									// Initialize I2C communication
 	PORTD &= ~(1<<PD2);							// Cut power to RTC	
-	
-	PORTD |= (1<<PD2);							// Give power to RTC
-	//rtc_set_time_12h(10,0,0,1);				// Set time to 10:00:00 PM, do it once to set RTC, then comment tis line and reflash
-												// code to MCU (to prevent RTC from initiating to 10:00:00 PM each time on MCU reset)
-	PORTD &= ~(1<<PD2);							// Cut power to RTC	
-	
+		
 	while (1)
 	{
 		sleep();
@@ -99,7 +99,38 @@ int main()
 			minutes_to_matrix(min, data);		// Convert minutes to the data array to be displayed on the LED matrix
 			if(min>35)hour++;					// If minutes are more than half an hour, then add an hour to the display
 			hours_to_matrix(hour, data);		// Convert hours to the data array to be displayed on the LED matrix
-			display(data);						// Display the data array
+			display(data, 1000);					// Display the data array for 10s (1251)
+			
+			if (bit_is_clear(PIND,PD3))			// If button is still pressed
+			{
+				MCUCR |= (1<<ISC11);			// ...
+				MCUCR &= ~(1<<ISC10);			// ... Enable interrupt on falling edge of INT1
+				sei();                         	// Enable interrupts
+				setmode=1;						// Go to setmode
+				
+				for (time_counter=0;time_counter<20;time_counter++) // Blink several times
+				{
+					if (bt_flag)
+					{
+						bt_flag=0;				// Reset button flag
+						min=min-min%5;			// Set min to nearest 5min step
+						min+=5;					// Increase minutes by 5 on button press
+						if (min>=60)min=0;		// Handle minutes overflow
+						if ((min>=35) && (min<40))hour++; // Increase hour
+						if (hour>=12)hour=0;	// Handle hour overflow
+					}
+					minutes_to_matrix(min, data);	// Convert minutes to the data array to be displayed on the LED matrix
+					hours_to_matrix(hour, data);// Convert hours to the data array to be displayed on the LED matrix
+					display(data, 31);			// Display the data array for 0.25s
+					_delay_ms(50);				// Wait 250ms
+				}
+				cli();                         	// Disable interrupts
+				setmode=0;						// Exit setmode
+				
+				PORTD |= (1<<PD2);				// Give power to RTC
+				rtc_set_time_12h(hour,min,0,0);	// Set new time to RTC
+				PORTD &= ~(1<<PD2);				// Cut power to RTC
+			}
 		}
 	}
 }
@@ -192,7 +223,7 @@ void hours_to_matrix(uint8_t now_hours, uint8_t *line_data)
 	}
 }
 
-void display(uint8_t *line_data)
+void display(uint8_t *line_data, uint16_t number_of_loops)
 {
 	uint8_t i, temp, temprev[8];				// 8 bits variables declaration
 	uint16_t y;									// 16 bits variables declaration
@@ -202,7 +233,7 @@ void display(uint8_t *line_data)
 		temprev[i] = (line_data[i] * 0x0202020202ULL & 0x010884422010ULL) % 1023;   // Reverse binary (0bABCDEFGH --> 0bHGFEDCBA)
 	}
 	
-	for(y=0; y<1251; y++)						// Loop multiplexing 1250 time to display for 10s
+	for(y=0; y<number_of_loops; y++)			// Loop multiplexing
 	{
 		for(i=0; i<8; i++)						// For each line
 		{
@@ -242,8 +273,7 @@ void sleep()
 	ACSR |= (1<<ACD);          					// Disable Analog comparator	
 	
 	GICR |= (1<<INT1);							// Enable interrupt	INT1
-	MCUCR &= ~(1<<ISC11);
-	MCUCR &= ~(1<<ISC10);						// Enable interrupt on low level of INT1 (only compatible mode with sleep mode wake up on INT1)
+	MCUCR &= ~((1<<ISC11) | (1<<ISC10));		// Enable interrupt on low level of INT1 (only compatible mode with sleep mode wake up on INT1)
 	
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);   	 	// Set sleep mode to "power down mode"
 	sleep_enable();                        		// Sets the Sleep Enable bit in the MCUCR Register (SE BIT)
@@ -252,7 +282,7 @@ void sleep()
 
 	//...Wait for interrupt to wake-up MCU...
 	
-	// Interruption occured : ISR(INT1_vect) is called
+	// Interruption occurred : ISR(INT1_vect) is called
 	
 	cli();                                  	// Disable interrupts
 	sleep_disable();                        	// Clear Sleep Enable bit (SE bit)
@@ -260,7 +290,15 @@ void sleep()
 
 ISR(INT1_vect)									// Interrupt service routine
 {
-	sleep_disable();							// When interruption occured, disable sleep (and so wake MCU up)
+	if (setmode)								// If user is changing the time
+	{
+		time_counter=0;							// Reset time counter, allowing 5 more seconds to change the time before returning to sleep mode
+		bt_flag = 1;							// Set button flag to 1, to change time
+	} 
+	else										// If the interruption occurred during sleep mode
+	{
+		sleep_disable();						// When interruption occurred, disable sleep mode (and so wake MCU up)
+	}
 }
 
 void io_setup()
@@ -274,6 +312,7 @@ void io_setup()
 	PORTB = 0x00;								// All outputs low
 	PORTC = 0x00;								// All outputs low
 	PORTD = 0x10;								// All outputs low except PD4 (led OFF)
+	PORTD |= (1<<PD3);							// Enable pullup on PD3
 }
 
 void check_battery(uint8_t *lowbat, uint8_t *critbat)
